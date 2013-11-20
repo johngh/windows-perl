@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 
-use Prima qw(ComboBox Edit Application MsgBox);
+use Prima qw(ComboBox Edit Application Buttons MsgBox);
 
 use Prima::Classes;
 use Prima::StdDlg;
@@ -27,7 +27,8 @@ my $win_count = {
 
 my $cfg;
 $cfg->{comment_char} = '#';
-$cfg->{fileName} = "$ENV{HOMEDRIVE}/etc/sessions.ini";
+# $cfg->{fileName} = "$ENV{HOMEDRIVE}/etc/sessions.ini";
+$cfg->{fileName} = "E:/win/etc/sessions.ini";
 
 package Debug;
 sub DEBUG { 1 }
@@ -94,7 +95,7 @@ sub read_config
 	my $app = $::application;
 	{
 
-		Debug::Print "Opening '$ini'\n";
+		Debug::Print "Reading '$ini'\n";
 		open (my $ini_fh, "$ini") || die "Can't read '$ini': $!\n";
 		while (defined (my $line = <$ini_fh>)) {
 
@@ -390,13 +391,13 @@ sub launch_putty
 		print join " ", @args, $/;
 
 	my $msg = "";
-  	system(@args);
+	system(1,@args);
 	if ($? == -1) {
 		$msg = sprintf "Failed to execute: $!\n";
 	}
 	elsif ($? & 127) {
 		$msg = sprintf "Child died with signal %d, %s coredump\n",
-			($? & 127),  ($? & 128) ? 'with' : 'without';
+			($? & 127), ($? & 128) ? 'with' : 'without';
 	}
 	else {
 		$msg = sprintf "Child exited with value %d\n", $? >> 8
@@ -415,7 +416,7 @@ $w = Prima::MainWindow-> new(
 	menuItems => [
 	[ file => '~File' => [
 		[ '~Open', 'Ctrl+O', '^O', \&file_open ],
-		[ '~Test', 'Ctrl+T', '^T', \&system_save_file ],
+#		[ '~Test', 'Ctrl+T', '^T', \&system_save_file ],
 		[ '~Save', 'Ctrl+S', '^S', \&file_save ],
 		[ 'Save ~as...', \&file_save_as ],
 		[],
@@ -429,7 +430,8 @@ $w = Prima::MainWindow-> new(
 
 $w->insert( "ComboBox",
 	name => 'DomainList',
-	items => ['domains'],
+	text => 'Domain...',
+	items => ['Domains...'],
 	pack => { side => 'left', expand => 1, fill => 'both', padx => 20, pady => 20},
 	onChange => sub { populate_groups( $w->GroupList, @_)},
 );
@@ -437,7 +439,8 @@ $w->DomainList->style(cs::DropDownList);
 
 $w-> insert( "ComboBox",
 	name => 'GroupList',
-	items => ['groups'],
+	text => 'Group...',
+	items => ['Group...'],
 	pack => { side => 'left', expand => 1, fill => 'both', padx => 20, pady => 20},
 	onChange => sub { populate_hosts( $w->HostList, @_)},
 );
@@ -445,11 +448,25 @@ $w->GroupList->style(cs::DropDownList);
 
 $w-> insert( "ComboBox",
 	name => 'HostList',
-	items => ['Hosts'],
+	text => 'Host...',
+	items => ['Host...'],
 	pack => { side => 'left', expand => 1, fill => 'both', padx => 20, pady => 20},
 	onChange => sub { launch_putty() },
 );
 $w->HostList->style(cs::DropDown);
+
+# $w-> insert( Button =>
+# 	text     => 'Go',
+# 	growMode => gm::Center,
+# 	onClick  => sub { Prima::message("Went!") }
+# );
+$w-> insert( Button =>
+	text     => 'Quit',
+	growMode => gm::Center,
+	# pack => { expand => 1, fill => 'both', padx => 20, pady => 20},
+	onClick  => sub { exit }
+);
+
 
 # $w-> insert("NewHost", pack => {side => 'bottom', fill => 'x', padx => 20, pady => 20 });
 
