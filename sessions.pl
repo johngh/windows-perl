@@ -27,8 +27,8 @@ my $win_count = {
 
 my $cfg;
 $cfg->{comment_char} = '#';
-# $cfg->{fileName} = "$ENV{HOMEDRIVE}/etc/sessions.ini";
-$cfg->{fileName} = "E:/win/etc/sessions.ini";
+$cfg->{fileName} = "$ENV{HOMEDRIVE}/etc/sessions.ini";
+# $cfg->{fileName} = "E:/win/etc/sessions.ini";
 
 package Debug;
 sub DEBUG { 1 }
@@ -291,6 +291,27 @@ sub file_save_as
 
 }
 
+sub empty_conf
+{
+
+	print "#\n# Emptying config...\n#\n";
+
+	my $keep = {
+		'settings' => 1,
+	};
+
+	for my $sect ( keys %{$cfg->{sects}} ) {
+		next if $keep->{$sect};
+		print "Deleting $sect\n";
+		delete $cfg->{sects}->{$sect};
+		delete $cfg->{parms}->{$sect};
+		# delete $cfg->{data}->{$sect};
+	}
+	use Data::Dumper;
+	print Dumper $cfg;
+
+}
+
 sub print_conf
 {
 
@@ -395,14 +416,14 @@ sub launch_putty
 	if ($? == -1) {
 		$msg = sprintf "Failed to execute: $!\n";
 	}
-	elsif ($? & 127) {
-		$msg = sprintf "Child died with signal %d, %s coredump\n",
-			($? & 127), ($? & 128) ? 'with' : 'without';
-	}
-	else {
-		$msg = sprintf "Child exited with value %d\n", $? >> 8
-			if $cfg->{data}->{settings}->{verbose} eq "yes";
-	}
+#	elsif ($? & 127) {
+#		$msg = sprintf "Child died with signal %d, %s coredump\n",
+#			($? & 127), ($? & 128) ? 'with' : 'without';
+#	}
+#	else {
+#		$msg = sprintf "Child exited with value %d\n", $? >> 8
+#			if $cfg->{data}->{settings}->{verbose} eq "yes";
+#	}
 	Prima::MsgBox::message($msg) if $msg;
 
 }
@@ -421,6 +442,7 @@ $w = Prima::MainWindow-> new(
 		[ 'Save ~as...', \&file_save_as ],
 		[],
 		[ '~Print config', 'Ctrl+P', '^P', \&print_conf ],
+		[ '~Empty config', 'Ctrl+E', '^E', \&empty_conf ],
 		[],
 #		[ 'E~xit' => 'Alt+X' => '@X' => sub {$::application-> close} ],
 		['E~xit', 'Alt+X', km::Alt | ord('X'), sub { shift-> close } ],
@@ -453,7 +475,8 @@ $w-> insert( "ComboBox",
 	pack => { side => 'left', expand => 1, fill => 'both', padx => 20, pady => 20},
 	onChange => sub { launch_putty() },
 );
-$w->HostList->style(cs::DropDown);
+$w->HostList->style(cs::DropDownList);
+# $w->HostList->style(cs::DropDown);
 
 # $w-> insert( Button =>
 # 	text     => 'Go',
