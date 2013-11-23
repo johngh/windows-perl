@@ -69,17 +69,31 @@ package Launcher;
 sub populate_domains
 {
 
-	# use Data::Dumper;
-	# print Dumper $cfg;
 	my $domain_list = $w->DomainList-> List;
 	$domain_list->delete_items( 0..$domain_list->count );
 	# print Dumper $domain_list;
-	for my $dom ( sort keys %{$cfg->{parms}->{'Domains'}} ) {
+	$domain_list->add_items( "Domain..." );
+	my $dom_count;
+	for my $dom ( sort keys %{$cfg->{data}->{'Domains'}} ) {
 		$cfg->{data}->{settings}->{verbose} eq "yes" &&
 			print "Add domain: $dom\n";
 		$domain_list->add_items( $dom );
-		# = $cfg->{data}->{$sect}->{$parm}\n";
+
+#
+# See: http://cpansearch.perl.org/src/KARASIK/Prima-1.37/examples/menu.pl 
+#
+#		$w->menu->insert([
+#			[ $dom => [
+#			       [ '' => ''],	
+#			]]
+#		], 'host', 1);
+#
+
 	}
+
+	# use Data::Dumper;
+	# print Dumper $w->menu;
+	
 
 }
 
@@ -108,7 +122,6 @@ sub read_config
 			elsif ( $line =~ /^\s*([^=]+?)\s*=\s*(.*?)\s*$/ ) {
 				$parm = $1;
 				$cfg->{data}->{$sect}->{$parm} = $2;
-				$cfg->{parms}->{$sect}->{$parm} = undef;
 			}
 
 		}
@@ -231,14 +244,13 @@ sub file_save
 	open (my $save_fh, '>', $file_name) or Prima::MsgBox::message("Can't save '$file_name':$@");
 	for my $sect ( keys %{$cfg->{sects}} ) {
 		print $save_fh "[$sect]\n";
-		for my $parm ( keys %{$cfg->{parms}->{$sect}} ) {
+		for my $parm ( keys %{$cfg->{data}->{$sect}} ) {
 			print $save_fh "$parm = $cfg->{data}->{$sect}->{$parm}\n";
 		}
 		print $save_fh $/;
 	}
 	my $ignore = {
 		data => 1,
-		parms => 1,
 		sects => 1,
 	};
 	for my $key ( keys %{$cfg} ) {
@@ -291,24 +303,45 @@ sub file_save_as
 
 }
 
-sub empty_conf
+sub edit_conf
 {
 
-	print "#\n# Emptying config...\n#\n";
+	my @args = (
+		$cfg->{data}->{settings}->{editor}, $cfg->{fileName}
+	);
 
-	my $keep = {
-		'settings' => 1,
-	};
+	$cfg->{data}->{settings}->{verbose} eq "yes" &&
+		print join " ", @args, $/;
+
+	my $msg = "";
+	system(1,@args);
+	if ($? == -1) {
+		$msg = sprintf "Failed to execute: $!\n";
+	}
+	Prima::MsgBox::message($msg) if $msg;
+
+}
+
+sub trash_conf
+{
+
+	print "#\n# Trashing config...\n#\n";
 
 	for my $sect ( keys %{$cfg->{sects}} ) {
-		next if $keep->{$sect};
+		next if $sect eq 'settings';
 		print "Deleting $sect\n";
 		delete $cfg->{sects}->{$sect};
-		delete $cfg->{parms}->{$sect};
-		# delete $cfg->{data}->{$sect};
+		delete $cfg->{data}->{$sect};
 	}
-	use Data::Dumper;
-	print Dumper $cfg;
+	# use Data::Dumper;
+	# Launcher::populate_domains();
+	my $domain_list = $w->DomainList-> List;
+	# print Dumper $domain_list;
+	#
+	$domain_list->add_items("Load new config...");
+	Launcher::populate_domains();
+	# $w->DomainList->text = "Load new config...";
+	# $domain_list->{edit}->text("Fred");
 
 }
 
@@ -319,14 +352,13 @@ sub print_conf
 
 	for my $sect ( keys %{$cfg->{sects}} ) {
 		print "[$sect]\n";
-		for my $parm ( keys %{$cfg->{parms}->{$sect}} ) {
+		for my $parm ( keys %{$cfg->{data}->{$sect}} ) {
 			print "$parm = $cfg->{data}->{$sect}->{$parm}\n";
 		}
 		print $/;
 	}
 	my $ignore = {
 		data => 1,
-		parms => 1,
 		sects => 1,
 	};
 	for my $key ( keys %{$cfg} ) {
@@ -368,6 +400,11 @@ sub populate_groups
 		$cfg->{data}->{settings}->{verbose} eq "yes" &&
 			print "Add group: $group\n";
 		$group_list->add_items( $group );
+		$w->menu->insert([
+			[ $domain => [
+			       [ $group => $group],	
+			]]
+		], 'host', 1);
 	}
 
 }
@@ -394,6 +431,17 @@ sub launch_putty
 {
 
 	my $host = $w->HostList->text;
+	my $location = $cfg->{data}->{settings}->{location};
+	my %ldom = map { $_ => 1 } split(' ', $cfg->{data}->{LocalDomains}->{$location});
+
+	my $domain = $cfg->{data}->{Domains}->{ $w->DomainList->text };
+	
+	if ( ! $ldom{$domain} ) {
+		$host = "$host.$domain";
+	}
+
+	# Prima::MsgBox::message( $host );
+
 	my $user_at_host;
 
 	if ( $host =~ /@/ ) {
@@ -441,11 +489,15 @@ $w = Prima::MainWindow-> new(
 		[ '~Save', 'Ctrl+S', '^S', \&file_save ],
 		[ 'Save ~as...', \&file_save_as ],
 		[],
+		[ '~Edit config', 'Ctrl+E', '^E', \&edit_conf ],
 		[ '~Print config', 'Ctrl+P', '^P', \&print_conf ],
-		[ '~Empty config', 'Ctrl+E', '^E', \&empty_conf ],
+		[ '~Trash config', 'Ctrl+T', '^T', \&trash_conf ],
 		[],
 #		[ 'E~xit' => 'Alt+X' => '@X' => sub {$::application-> close} ],
 		['E~xit', 'Alt+X', km::Alt | ord('X'), sub { shift-> close } ],
+	]],
+	[ host => '~Host' => [
+		[],
 	]],
 	],
 );
@@ -471,6 +523,7 @@ $w->GroupList->style(cs::DropDownList);
 $w-> insert( "ComboBox",
 	name => 'HostList',
 	text => 'Host...',
+	size => [ 100, 100 ],	
 	items => ['Host...'],
 	pack => { side => 'left', expand => 1, fill => 'both', padx => 20, pady => 20},
 	onChange => sub { launch_putty() },
@@ -489,7 +542,6 @@ $w-> insert( Button =>
 	# pack => { expand => 1, fill => 'both', padx => 20, pady => 20},
 	onClick  => sub { exit }
 );
-
 
 # $w-> insert("NewHost", pack => {side => 'bottom', fill => 'x', padx => 20, pady => 20 });
 
