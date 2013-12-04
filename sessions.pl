@@ -479,7 +479,7 @@ sub launch_putty
 # my $w = Prima::Window-> create(
 $w = Prima::MainWindow-> new( 
 	text => 'Sessions',
-	size => [ 500, 300],
+	size => [ 550, 300],
 	onDestroy => \&sess_destroy,
 	# onMouseWheel => sub { iv_mousewheel( shift-> IV, @_)},
 	menuItems => [
@@ -506,6 +506,7 @@ $w->insert( "ComboBox",
 	name => 'DomainList',
 	text => 'Domain...',
 	items => ['Domains...'],
+	font => { size => 11, face => 'Calibri' },
 	pack => { side => 'left', expand => 1, fill => 'both', padx => 20, pady => 20},
 	onChange => sub { populate_groups( $w->GroupList, @_)},
 );
@@ -515,6 +516,7 @@ $w-> insert( "ComboBox",
 	name => 'GroupList',
 	text => 'Group...',
 	items => ['Group...'],
+	font => { size => 11, face => 'Calibri' },
 	pack => { side => 'left', expand => 1, fill => 'both', padx => 20, pady => 20},
 	onChange => sub { populate_hosts( $w->HostList, @_)},
 );
@@ -525,6 +527,7 @@ $w-> insert( "ComboBox",
 	text => 'Host...',
 	size => [ 100, 100 ],	
 	items => ['Host...'],
+	font => { size => 11, face => 'Calibri' },
 	pack => { side => 'left', expand => 1, fill => 'both', padx => 20, pady => 20},
 	onChange => sub { launch_putty() },
 );
